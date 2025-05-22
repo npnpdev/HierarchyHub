@@ -1,0 +1,194 @@
+﻿<Window x:Class="PT_Lab1.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:PT_Lab1"
+        Title="PT_Lab1_window" Height="450" Width="800">
+
+    <Window.Resources>
+        <!-- 1) Kontekstowe menu dla węzłów -->
+        <ContextMenu x:Key="NodeContextMenu">
+            <MenuItem Header="Create"      Click="CreateMenu_Click"    CommandParameter="{Binding}"/>
+            <MenuItem Header="Delete"      Click="DeleteMenu_Click"    CommandParameter="{Binding}"/>
+            <Separator/>
+            <MenuItem Header="LINQ Query 1" Click="LinqQuery1_Click"   CommandParameter="{Binding}"/>
+            <MenuItem Header="LINQ Query 2" Click="LinqQuery2_Click"   CommandParameter="{Binding}"/>
+            <MenuItem Header="XML Serialize"   Click="XmlSerialize_Click"   CommandParameter="{Binding}"/>
+            <MenuItem Header="XML Deserialize" Click="XmlDeserialize_Click" CommandParameter="{Binding}"/>
+            <MenuItem Header="Export to XHTML" Click="ExportXhtml_Click"   CommandParameter="{Binding}"/>
+        </ContextMenu>
+
+        <!-- Styl dla DataGridRow: ukrywa placeholder wiersza -->
+        <Style TargetType="DataGridRow" x:Key="NoPlaceholderRowStyle">
+            <Style.Triggers>
+                <Trigger Property="DataGridRow.IsNewItem" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Styl dla TreeViewItem:
+               – przypięcie ContextMenu
+               – ukrycie NewItemPlaceholder -->
+        <Style TargetType="TreeViewItem" x:Key="DefaultTreeViewItemStyle">
+            <Setter Property="ContextMenu" Value="{StaticResource NodeContextMenu}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding}" Value="{x:Static CollectionView.NewItemPlaceholder}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Template dla Person w TreeView -->
+        <HierarchicalDataTemplate DataType="{x:Type local:Person}"
+                                  ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Name}" />
+                <TextBlock Text=" ("/>
+                <TextBlock Text="{Binding Id}" />
+                <TextBlock Text=")" />
+            </StackPanel>
+        </HierarchicalDataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="Application">
+                <MenuItem Header="Generate Data" Click="GenerateData_Click"/>
+                <MenuItem Header="Version" Click="Version_Click"/>
+                <Separator/>
+                <MenuItem Header="LINQ Query 1" Click="LinqQuery1_Click"/>
+                <MenuItem Header="LINQ Query 2" Click="LinqQuery2_Click"/>
+                <Separator/>
+                <MenuItem Header="XML Serialize" Click="XmlSerialize_Click"/>
+                <MenuItem Header="XML Deserialize" Click="XmlDeserialize_Click"/>
+                <MenuItem Header="Show XPath Unique" Click="ShowXPath_Click"/>
+                <MenuItem Header="Export to XHTML" Click="ExportXhtml_Click"/>
+                <Separator/>
+                <MenuItem Header="Exit" Click="Exit_Click"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- ToolBar z wyszukiwaniem -->
+        <ToolBar DockPanel.Dock="Top" Margin="5">
+            <Label Content="Szukaj po:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="cbProperties"
+              Width="150"
+              IsEditable="False"
+              GotFocus="cbProperties_GotFocus"/>
+            <TextBox x:Name="tbSearchValue"
+             Width="150"
+             Margin="5,0,0,0"/>
+            <Button x:Name="btnSearch"
+            Content="Szukaj"
+            Margin="5,0,0,0"
+            Click="btnSearch_Click"/>
+            <Button x:Name="btnClear"
+            Content="Czyść filtr"
+            Margin="5,0,0,0"
+            Click="btnClear_Click"/>
+
+            <!-- ======== sortowanie ======== -->
+            <Separator Margin="10,0"/>
+            <Label Content="Sortuj po:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="cbSortProperties"
+              Width="150"
+              IsEditable="False"
+              DropDownOpened="cbSortProperties_DropDownOpened"/>
+            <Button x:Name="btnSort"
+            Content="Sortuj"
+            Margin="5,0,0,0"
+            Click="btnSort_Click"/>
+        </ToolBar>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <!-- drzewo + panel details -->
+                <RowDefinition Height="*"/>
+                <!-- DataGrid -->
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- TreeView -->
+            <TreeView x:Name="treeView"
+                      Grid.Column="0" Margin="5"
+                      SelectedItemChanged="TreeView_SelectedItemChanged"
+                      ItemContainerStyle="{StaticResource DefaultTreeViewItemStyle}" />
+
+            <!-- Details panel -->
+            <ScrollViewer Grid.Row="0" Grid.Column="1" Margin="5">
+                <TextBlock x:Name="detailsTextBlock" TextWrapping="Wrap"/>
+            </ScrollViewer>
+
+            <!-- DataGrid -->
+            <DataGrid x:Name="dataGrid"
+                      Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="True"
+                      CanUserDeleteRows="True"
+                      IsReadOnly="False"
+                      CanUserSortColumns="True"
+                      Margin="5"
+                      >
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name"               Binding="{Binding Name}" />
+                    <DataGridTextColumn Header="Surname"            Binding="{Binding Surname}" />
+                    <DataGridTextColumn Header="Age"                Binding="{Binding Age}" />
+                    <DataGridTextColumn Header="GPA"                Binding="{Binding Info.GPA, StringFormat={}{0:F2}}" />
+                    <DataGridTextColumn Header="Completed Projects" Binding="{Binding Info.CompletedProjects}" />
+                    <DataGridTextColumn Header="Year of Study"      Binding="{Binding Info.Year}" />
+                    <!-- <DataGridTextColumn Header="Children Count"     Binding="{Binding Children.Count}" /> -->
+                    <!-- Nowa kolumna z przyciskiem -->
+                    <DataGridTemplateColumn Header="Akcje" Width="Auto">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <!-- Pokaż dzieci -->
+                                    <Button Content="Pokaż dzieci"
+                Click="ShowChildrenFromRow_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Children.Count}" Value="0">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+
+                                    <!-- Wejdź wyżej -->
+                                    <Button Content="Wejdź wyżej"
+        Click="GoUpFromRow_Click">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <!-- domyślnie aktywny -->
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Style.Triggers>
+                                                    <!-- jeśli nie ma rodzica, wyłączamy przycisk -->
+                                                    <DataTrigger Binding="{Binding Parent}" Value="{x:Null}">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                    <Button Content="Dodaj dziecko"
+                                      Click="AddChildFromRow_Click"
+                                      DataContext="{Binding}">
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Window>
